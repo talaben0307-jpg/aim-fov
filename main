@@ -1,135 +1,111 @@
--- Zelynx Hub - Camlock with Adjustable FOV
--- Created by @bphong0946
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/Fluent.lua"))()
+local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
--- Biến cấu hình Aim & FOV
-local isAimEnabled = false
-local fovRadius = 100 -- Bán kính FOV mặc định
+-- Khởi tạo Window Fluent UI
+local Window = Fluent:CreateWindow({
+    Title = "Zelynx Hub | JJS",
+    SubTitle = "Roblox Player - @bphong0946",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(580, 460),
+    Acrylic = true, -- Hiệu ứng mờ nền kính
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.LeftControl -- Phím ẩn/hiện menu
+})
 
--- Tạo giao diện GUI
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "ZelynxAimHub"
-ScreenGui.Parent = game:CoreGui
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+-- Các Tab chính
+local Tabs = {
+    Main = Window:AddTab({ Title = "Combat / Main", Icon = "sword" }),
+    Visuals = Window:AddTab({ Title = "Visuals & FOV", Icon = "eye" }),
+    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
+}
 
-local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainFrame"
-MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-MainFrame.BorderColor3 = Color3.fromRGB(120, 0, 255)
-MainFrame.Position = UDim2.new(0.5, -150, 0.5, -120)
-MainFrame.Size = UDim2.new(0, 300, 0, 240)
-MainFrame.Active = true
-MainFrame.Draggable = true
+local Options = Fluent.Options
 
--- Header Zelynx
-local Header = Instance.new("TextLabel")
-Header.Parent = MainFrame
-Header.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-Header.Size = UDim2.new(1, 0, 0, 35)
-Header.Font = Enum.Font.GothamBold
-Header.Text = "Zelynx"
-Header.TextColor3 = Color3.fromRGB(255, 255, 255)
-Header.TextSize = 16
+---------------------------------------------------------------------------
+-- 1. TAB COMBAT (Auto Counter, Instant Blackhole, Auto Black Flash)
+---------------------------------------------------------------------------
 
--- Sub-label
-local SubLabel = Instance.new("TextLabel")
-SubLabel.Parent = Header
-SubLabel.BackgroundTransparency = 1
-SubLabel.Position = UDim2.new(0, 0, 1, 0)
-SubLabel.Size = UDim2.new(1, 0, 0, 20)
-SubLabel.Font = Enum.Font.Gotham
-SubLabel.Text = "Roblox Player | @bphong0946"
-SubLabel.TextColor3 = Color3.fromRGB(170, 170, 170)
-SubLabel.TextSize = 11
+-- Biến chức năng
+local isCounterActive = false
+local isBlackholeActive = false
+local isAutoBFActive = false
 
--- Nút Bật/Tắt Aim (ON/OFF)
-local ToggleAimBtn = Instance.new("TextButton")
-ToggleAimBtn.Parent = MainFrame
-ToggleAimBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-ToggleAimBtn.Position = UDim2.new(0.1, 0, 0.4, 0)
-ToggleAimBtn.Size = UDim2.new(0.8, 0, 0, 40)
-ToggleAimBtn.Font = Enum.Font.GothamBold
-ToggleAimBtn.Text = "Aim Camlock [OFF]"
-ToggleAimBtn.TextColor3 = Color3.fromRGB(255, 50, 50)
-ToggleAimBtn.TextSize = 14
+Tabs.Main:AddParagraph({
+    Title = "Trạng thái kỹ năng nhân vật",
+    Content = "Bật các tính năng tự động kích hoạt kỹ năng đặc trưng cho từng nhân vật trong Jujutsu Shenanigans."
+})
 
-ToggleAimBtn.MouseButton1Click:Connect(function()
-    isAimEnabled = not isAimEnabled
-    if isAimEnabled then
-        ToggleAimBtn.Text = "Aim Camlock [ON]"
-        ToggleAimBtn.TextColor3 = Color3.fromRGB(50, 255, 50)
-    else
-        ToggleAimBtn.Text = "Aim Camlock [OFF]"
-        ToggleAimBtn.TextColor3 = Color3.fromRGB(255, 50, 50)
+-- Auto Counter (Charles - Eye Catching)
+Tabs.Main:AddToggle("AutoCounterToggle", {
+    Title = "Auto Counter [Charles]",
+    Default = false,
+    Description = "Tự động phản đòn khi bị tấn công cận chiến.",
+    Callback = function(Value)
+        isCounterActive = Value
     end
-end)
+})
 
--- Nhãn hiển thị giá trị FOV hiện tại
-local FovLabel = Instance.new("TextLabel")
-FovLabel.Parent = MainFrame
-FovLabel.BackgroundTransparency = 1
-FovLabel.Position = UDim2.new(0.1, 0, 0.65, 0)
-FovLabel.Size = UDim2.new(0.8, 0, 0, 20)
-FovLabel.Font = Enum.Font.Gotham
-FovLabel.Text = "FOV Radius: " .. fovRadius
-FovLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-FovLabel.TextSize = 13
+-- Instant Blackhole (Yuki)
+Tabs.Main:AddToggle("InstantBlackholeToggle", {
+    Title = "Instant Blackhole [Yuki]",
+    Default = false,
+    Description = "Ép xung phím R liên tục để bung chiêu tức thì.",
+    Callback = function(Value)
+        isBlackholeActive = Value
+    end
+})
 
--- Nút tăng FOV (+)
-local IncFovBtn = Instance.new("TextButton")
-IncFovBtn.Parent = MainFrame
-IncFovBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-IncFovBtn.Position = UDim2.new(0.55, 0, 0.8, 0)
-IncFovBtn.Size = UDim2.new(0.35, 0, 0, 35)
-IncFovBtn.Font = Enum.Font.GothamBold
-IncFovBtn.Text = "FOV +"
-IncFovBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-IncFovBtn.TextSize = 13
+-- Auto Black Flash (Yuji)
+Tabs.Main:AddToggle("AutoBFToggle", {
+    Title = "Auto Black Flash [Yuji]",
+    Default = false,
+    Description = "Tự động chớp thời điểm tung đòn chí mạng.",
+    Callback = function(Value)
+        isAutoBFActive = Value
+    end
+})
 
-IncFovBtn.MouseButton1Click:Connect(function()
-    fovRadius = math.min(300, fovRadius + 20)
-    FovLabel.Text = "FOV Radius: " .. fovRadius
-end)
+---------------------------------------------------------------------------
+-- 2. TAB VISUALS & FOV (Camlock & FOV Circle)
+---------------------------------------------------------------------------
 
--- Nút giảm FOV (-)
-local DecFovBtn = Instance.new("TextButton")
-DecFovBtn.Parent = MainFrame
-DecFovBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-DecFovBtn.Position = UDim2.new(0.1, 0, 0.8, 0)
-DecFovBtn.Size = UDim2.new(0.35, 0, 0, 35)
-DecFovBtn.Font = Enum.Font.GothamBold
-DecFovBtn.Text = "FOV -"
-DecFovBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-DecFovBtn.TextSize = 13
+local isAimEnabled = false
+local fovRadius = 100
 
-DecFovBtn.MouseButton1Click:Connect(function()
-    fovRadius = math.max(40, fovRadius - 20)
-    FovLabel.Text = "FOV Radius: " .. fovRadius
-end)
+Tabs.Visuals:AddToggle("AimCamlockToggle", {
+    Title = "Aim Camlock",
+    Default = false,
+    Description = "Khóa góc nhìn vào kẻ địch trong vùng FOV.",
+    Callback = function(Value)
+        isAimEnabled = Value
+    end
+})
 
--- Nút ẩn/hiện Menu bằng phím Insert hoặc bấm trực tiếp
-local ToggleMenuBtn = Instance.new("TextButton")
-ToggleMenuBtn.Parent = ScreenGui
-ToggleMenuBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-ToggleMenuBtn.BorderColor3 = Color3.fromRGB(120, 0, 255)
-ToggleMenuBtn.Position = UDim2.new(0, 10, 0, 10)
-ToggleMenuBtn.Size = UDim2.new(0, 100, 0, 30)
-ToggleMenuBtn.Font = Enum.Font.GothamBold
-ToggleMenuBtn.Text = "Toggle Menu"
-ToggleMenuBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleMenuBtn.TextSize = 12
+Tabs.Visuals:AddSlider("FOVRadiusSlider", {
+    Title = "Bán kính FOV",
+    Description = "Chỉnh độ rộng vùng quét mục tiêu",
+    Default = 100,
+    Min = 40,
+    Max = 300,
+    Rounding = 0,
+    Callback = function(Value)
+        fovRadius = Value
+    end
+})
 
-ToggleMenuBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
-end)
+---------------------------------------------------------------------------
+-- LOGIC XỬ LÝ CHẠY NGẦM (BACKEND LOOPS)
+---------------------------------------------------------------------------
 
--- Vẽ vòng tròn FOV tâm màn hình
+-- Vòng tròn FOV hiển thị trên màn hình
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Thickness = 1.5
 FOVCircle.NumSides = 64
@@ -137,7 +113,6 @@ FOVCircle.Filled = false
 FOVCircle.Color = Color3.fromRGB(120, 0, 255)
 FOVCircle.Transparency = 0.7
 
--- Tìm mục tiêu gần nhất nằm trong vùng FOV
 local function getClosestPlayerInFOV()
     local closestPlayer = nil
     local shortestDistance = fovRadius
@@ -164,16 +139,18 @@ local function getClosestPlayerInFOV()
     return closestPlayer
 end
 
--- Vòng lặp cập nhật FOV Circle và Camlock
+-- Vòng lặp chính xử lý Render và Auto actions
+local lastHealth = 100
+
 RunService.RenderStepped:Connect(function()
     local mouseLocation = UserInputService:GetMouseLocation()
     
-    -- Cập nhật thông số hiển thị vòng tròn FOV
+    -- Cập nhật FOV Circle
     FOVCircle.Visible = isAimEnabled
     FOVCircle.Radius = fovRadius
     FOVCircle.Position = mouseLocation
 
-    -- Xử lý khóa góc nhìn (Camlock) vào mục tiêu khi bật
+    -- Xử lý Camlock
     if isAimEnabled then
         local target = getClosestPlayerInFOV()
         if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
@@ -181,4 +158,44 @@ RunService.RenderStepped:Connect(function()
             Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
         end
     end
+
+    -- Xử lý Auto Counter (Check sụt máu)
+    pcall(function()
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChild("Humanoid") then
+            local currentHealth = char.Humanoid.Health
+            if currentHealth < lastHealth and isCounterActive then
+                VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Three, false, game)
+                task.wait(0.02)
+                VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Three, false, game)
+            end
+            lastHealth = currentHealth
+        end
+    end)
 end)
+
+-- Vòng lặp xử lý tốc độ cao cho Instant Blackhole (R spam) và Auto Black Flash
+task.spawn(function()
+    while true do
+        task.wait(0.05)
+        pcall(function()
+            if isBlackholeActive then
+                VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.R, false, game)
+                VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.R, false, game)
+            end
+            if isAutoBFActive then
+                VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+                task.wait(0.01)
+                VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+            end
+        end)
+    end
+end)
+
+-- Hoàn tất cài đặt giao diện Fluent
+Window:SelectTab(1)
+Fluent:Notify({
+    Title = "Zelynx Hub",
+    Content = "Đã tải thành công giao diện Fluent UI!",
+    Duration = 5
+})
